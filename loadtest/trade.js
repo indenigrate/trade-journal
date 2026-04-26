@@ -1,6 +1,8 @@
 import http from 'k6/http';
 import { check, sleep } from 'k6';
 import { Rate, Trend } from 'k6/metrics';
+import { htmlReport } from "https://raw.githubusercontent.com/benc-uk/k6-reporter/main/dist/bundle.js";
+import { textSummary } from "https://jslib.k6.io/k6-summary/0.0.1/index.js";
 
 const BASE_URL = __ENV.BASE_URL || 'http://localhost:8080';
 const JWT_TOKEN = __ENV.JWT_TOKEN;
@@ -91,5 +93,12 @@ export default function () {
   }) || errorRate.add(1);
 
   sleep(0.1);
+}
+
+export function handleSummary(data) {
+  return {
+    "loadtest/report.html": htmlReport(data),
+    stdout: textSummary(data, { indent: " ", enableColors: true }),
+  };
 }
 
