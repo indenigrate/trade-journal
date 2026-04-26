@@ -12,7 +12,7 @@ Backend implementation for the NevUp Hiring Hackathon 2026
 ## Deployment details
 
 * **Public Repository**: [https://github.com/indenigrate/trade-journal](https://github.com/indenigrate/trade-journal)
-* **Live Deployment URL**: [http://nevup.apnadomain.qzz.io](http://nevup.apnadomain.qzz.io)
+* **Live Deployment URL**: [https://nevup.apnadomain.qzz.io](https://nevup.apnadomain.qzz.io)
 
 ## Startup
 
