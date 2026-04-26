@@ -86,7 +86,7 @@ func (h *ProfileHandler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Query evidence for each pathology type
-	var pathologies []Pathology
+	pathologies := []Pathology{}
 	strengths := []string{}
 
 	for _, pType := range allPathologyTypes {
