@@ -7,7 +7,7 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-const MetricsCacheTTL = 30 * time.Second
+const MetricsCacheTTL = 5 * time.Minute
 
 // MetricsCache handles cache-aside for behavioral metrics.
 type MetricsCache struct {

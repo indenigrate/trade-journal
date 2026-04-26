@@ -17,7 +17,7 @@ import (
 
 func main() {
 	// Structured JSON logging
-	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
+	zerolog.TimeFieldFormat = time.RFC3339
 	log.Logger = zerolog.New(os.Stdout).With().Timestamp().Logger()
 
 	ctx, cancel := context.WithCancel(context.Background())

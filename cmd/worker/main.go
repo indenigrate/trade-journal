@@ -6,6 +6,8 @@ import (
 	"os/signal"
 	"syscall"
 
+	"time"
+
 	"github.com/onesine/nevup-backend/internal/cache"
 	"github.com/onesine/nevup-backend/internal/pipeline"
 	"github.com/onesine/nevup-backend/internal/store"
@@ -14,7 +16,7 @@ import (
 )
 
 func main() {
-	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
+	zerolog.TimeFieldFormat = time.RFC3339
 	log.Logger = zerolog.New(os.Stdout).With().Timestamp().Logger()
 
 	ctx, cancel := context.WithCancel(context.Background())

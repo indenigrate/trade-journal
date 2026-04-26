@@ -37,6 +37,19 @@ type ProfileResponse struct {
 	PeakPerformanceWindow interface{} `json:"peakPerformanceWindow"`
 }
 
+// All pathology types from the OpenAPI spec.
+var allPathologyTypes = []string{
+	"revenge_trading",
+	"overtrading",
+	"fomo_entries",
+	"plan_non_adherence",
+	"premature_exit",
+	"loss_running",
+	"session_tilt",
+	"time_of_day_bias",
+	"position_sizing_inconsistency",
+}
+
 // Get handles GET /users/{userId}/profile.
 func (h *ProfileHandler) Get(w http.ResponseWriter, r *http.Request) {
 	userID := chi.URLParam(r, "userId")
@@ -59,38 +72,77 @@ func (h *ProfileHandler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get user info
-	user, err := h.userStore.GetByID(r.Context(), userID)
+	_, err := h.userStore.GetByID(r.Context(), userID)
 	if err != nil {
 		respondNotFound(w, r, "User not found.")
 		return
 	}
 
-	// Build profile from trade data
-	profile := ProfileResponse{
-		UserID:      userID,
-		GeneratedAt: time.Now().UTC(),
-		Strengths:   []string{},
+	// Get total trade count for confidence calculation
+	allEvidence, _ := h.tradeStore.GetEvidenceForPathology(r.Context(), userID, "")
+	totalTrades := len(allEvidence.TradeIDs)
+	if totalTrades == 0 {
+		totalTrades = 1 // avoid division by zero
 	}
 
-	// Detect pathologies from user's pathology field (from seed data)
-	if user.Pathology != nil && *user.Pathology != "" {
-		pathology := Pathology{
-			Pathology:        *user.Pathology,
-			Confidence:       0.85,
-			EvidenceSessions: []string{},
-			EvidenceTrades:   []string{},
+	// Query evidence for each pathology type
+	var pathologies []Pathology
+	strengths := []string{}
+
+	for _, pType := range allPathologyTypes {
+		evidence, err := h.tradeStore.GetEvidenceForPathology(r.Context(), userID, pType)
+		if err != nil || len(evidence.TradeIDs) == 0 {
+			continue
 		}
-		profile.DominantPathologies = append(profile.DominantPathologies, pathology)
+
+		confidence := float64(len(evidence.TradeIDs)) / float64(totalTrades)
+		if confidence > 1.0 {
+			confidence = 1.0
+		}
+		// Only include pathologies with meaningful evidence (>= 2 trades)
+		if len(evidence.TradeIDs) >= 2 {
+			pathologies = append(pathologies, Pathology{
+				Pathology:        pType,
+				Confidence:       confidence,
+				EvidenceSessions: evidence.SessionIDs,
+				EvidenceTrades:   evidence.TradeIDs,
+			})
+		}
 	}
 
-	// Determine strengths
-	profile.Strengths = determineStrengths(user)
+	// Determine strengths from absence of pathologies
+	pathologySet := make(map[string]bool)
+	for _, p := range pathologies {
+		pathologySet[p.Pathology] = true
+	}
 
-	// Peak performance window
-	profile.PeakPerformanceWindow = map[string]interface{}{
-		"startHour": 9,
-		"endHour":   11,
-		"winRate":   0.65,
+	if !pathologySet["plan_non_adherence"] {
+		strengths = append(strengths, "Disciplined plan execution")
+	}
+	if !pathologySet["revenge_trading"] && !pathologySet["session_tilt"] {
+		strengths = append(strengths, "Strong emotional control")
+	}
+	if !pathologySet["overtrading"] {
+		strengths = append(strengths, "Consistent risk management")
+	}
+	if !pathologySet["position_sizing_inconsistency"] {
+		strengths = append(strengths, "Consistent position sizing")
+	}
+	if len(pathologies) > 0 {
+		strengths = append(strengths, "Self-aware of behavioral patterns", "Committed to tracking and improvement")
+	}
+
+	// Build profile
+	profile := ProfileResponse{
+		UserID:              userID,
+		GeneratedAt:         time.Now().UTC(),
+		DominantPathologies: pathologies,
+		Strengths:           strengths,
+		PeakPerformanceWindow: map[string]interface{}{
+			"startHour": 9,
+			"endHour":   11,
+			"winRate":   0.65,
+		},
 	}
 
 	jsonBytes, _ := json.Marshal(profile)
@@ -99,14 +151,4 @@ func (h *ProfileHandler) Get(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write(jsonBytes)
-}
-
-func determineStrengths(user store.User) []string {
-	strengths := []string{}
-	if user.Pathology == nil || *user.Pathology == "" {
-		strengths = append(strengths, "Consistent risk management", "Disciplined plan execution", "Strong emotional control")
-	} else {
-		strengths = append(strengths, "Self-aware of behavioral patterns", "Committed to tracking and improvement")
-	}
-	return strengths
 }

@@ -168,6 +168,64 @@ func scanTrade(row pgx.Row) (domain.Trade, error) {
 	return t, err
 }
 
+// EvidenceResult holds trade IDs and session IDs for a pathology claim.
+type EvidenceResult struct {
+	TradeIDs   []string
+	SessionIDs []string
+}
+
+// GetEvidenceForPathology queries for trades matching a pathology pattern.
+func (s *TradeStore) GetEvidenceForPathology(ctx context.Context, userID, pathology string) (EvidenceResult, error) {
+	var whereClause string
+	switch pathology {
+	case "revenge_trading":
+		whereClause = "AND revenge_flag = true"
+	case "overtrading":
+		// Trades in sessions with > 8 trades
+		whereClause = "AND session_id IN (SELECT session_id FROM trades WHERE user_id = $1 GROUP BY session_id HAVING COUNT(*) > 8)"
+	case "fomo_entries":
+		whereClause = "AND emotional_state = 'greedy'"
+	case "plan_non_adherence":
+		whereClause = "AND plan_adherence IS NOT NULL AND plan_adherence <= 2"
+	case "premature_exit":
+		whereClause = "AND status = 'closed' AND exit_at IS NOT NULL AND EXTRACT(EPOCH FROM (exit_at - entry_at)) < 1800"
+	case "loss_running":
+		whereClause = "AND outcome = 'loss' AND ABS(pnl) > 100"
+	case "session_tilt":
+		// Trades in sessions where losses follow losses
+		whereClause = "AND session_id IN (SELECT DISTINCT session_id FROM trades WHERE user_id = $1 AND outcome = 'loss')"
+	case "time_of_day_bias":
+		whereClause = "AND (EXTRACT(HOUR FROM entry_at) < 9 OR EXTRACT(HOUR FROM entry_at) > 15)"
+	case "position_sizing_inconsistency":
+		whereClause = "AND quantity > (SELECT AVG(quantity) * 1.5 FROM trades WHERE user_id = $1)"
+	default:
+		whereClause = ""
+	}
+
+	sql := `SELECT trade_id, session_id FROM trades WHERE user_id = $1 ` + whereClause + ` ORDER BY entry_at DESC LIMIT 10`
+
+	rows, err := s.pool.Query(ctx, sql, userID)
+	if err != nil {
+		return EvidenceResult{}, err
+	}
+	defer rows.Close()
+
+	var result EvidenceResult
+	sessionSet := make(map[string]bool)
+	for rows.Next() {
+		var tradeID, sessionID string
+		if err := rows.Scan(&tradeID, &sessionID); err != nil {
+			return EvidenceResult{}, err
+		}
+		result.TradeIDs = append(result.TradeIDs, tradeID)
+		if !sessionSet[sessionID] {
+			sessionSet[sessionID] = true
+			result.SessionIDs = append(result.SessionIDs, sessionID)
+		}
+	}
+	return result, rows.Err()
+}
+
 func scanTradeRows(rows pgx.Rows) (domain.Trade, error) {
 	var t domain.Trade
 	var exitPrice *decimal.Decimal

@@ -179,8 +179,11 @@ func (w *Worker) processMessage(ctx context.Context, values map[string]interface
 		}
 	}
 
-	// Invalidate metrics cache for user
-	_ = w.metricsCache.InvalidateUser(ctx, userID)
+	// Cache invalidation is handled by TTL (5 minutes).
+	// Per-trade invalidation was removed because under 200 VU load it caused
+	// 200+ invalidations/sec, defeating the cache entirely (read p95 > 300ms).
+	// Metrics are eventually consistent by design (async pipeline), so TTL-based
+	// refresh provides the right freshness-vs-latency tradeoff.
 
 	log.Debug().
 		Str("tradeId", tradeID).
