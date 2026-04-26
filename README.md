@@ -44,3 +44,11 @@ You can verify your remote deployment functionality and performance using the in
 ```
 
 *(Note: The script defaults to `http://nevup.apnadomain.qzz.io`. To test a different URL, prefix the command: `BASE_URL=http://your-domain.com ./test_remote.sh`)*
+
+## Hackathon Compromises & Caveats
+
+To strictly satisfy the requirement that the stack boots with a single `docker compose up -d` command with *zero* manual intervention on a cloned repository, the following architectural shortcuts were taken:
+
+* **Pushed `.env` file**: Environment variables containing secrets (like `JWT_SECRET` and `POSTGRES_PASSWORD`) have been pushed directly to the public repository. This is a massive anti-pattern in production environments but guarantees the one-click, zero-config reviewer experience mandated by the submission guidelines.
+* **Local NGINX proxy**: Instead of managing dedicated load balancer infrastructure (like AWS ALB or Cloudflare), an NGINX container is bundled directly within the docker-compose topology to securely proxy traffic and handle SSE requirements on port 80.
+* **Co-located Database**: PostgreSQL/TimescaleDB and Redis run as containers continuously alongside the API rather than utilizing robust managed services (e.g., AWS RDS or ElastiCache), drastically simplifying the local deployment topology for the evaluator's `docker compose` teardown.
