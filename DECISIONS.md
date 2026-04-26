@@ -2,7 +2,7 @@
 
 ## Architectural Decisions Record (ADR)
 
-### 1. No ORM — Raw SQL via pgx/v5
+### 1. No ORM - Raw SQL via pgx/v5
 
 **Decision**: Use raw SQL with `pgx/v5` for all database operations.
 
@@ -68,7 +68,7 @@
 
 ---
 
-## Appendix: EXPLAIN ANALYZE — Metrics Query
+## Appendix: EXPLAIN ANALYZE - Metrics Query
 
 ```sql
 EXPLAIN (ANALYZE, BUFFERS)
@@ -82,10 +82,10 @@ GROUP BY b ORDER BY b;
 ```
 
 **Key findings:**
-- **Planning Time: 60.012 ms** — dominated by hypertable chunk enumeration (158+ chunks)
-- **Execution Time: 4.296 ms** — actual data scan is fast due to index utilization
+- **Planning Time: 60.012 ms** - dominated by hypertable chunk enumeration (158+ chunks)
+- **Execution Time: 4.296 ms** - actual data scan is fast due to index utilization
 - Uses `Index Scan Backward using _hyper_1_*_chunk_idx_metrics_user_bucket`
-- `Index Cond: (user_id = '...'::uuid)` — confirms composite index usage
-- `Buffers: shared hit=16579` — all data served from shared buffers (no disk I/O)
+- `Index Cond: (user_id = '...'::uuid)` - confirms composite index usage
+- `Buffers: shared hit=16579` - all data served from shared buffers (no disk I/O)
 
 This 60ms planning overhead per query × 4 queries per metrics request = ~240ms baseline without caching, which is why the 5-minute Redis cache TTL is operationally necessary to achieve the spec-mandated p95 ≤ 200ms.
