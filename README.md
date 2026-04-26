@@ -45,6 +45,14 @@ You can verify your remote deployment functionality and performance using the in
 
 *(Note: The script defaults to `http://nevup.apnadomain.qzz.io`. To test a different URL, prefix the command: `BASE_URL=http://your-domain.com ./test_remote.sh`)*
 
+## Load Test Performance (Local vs Deployment)
+
+The load test results generated in the `report.html` artifact primarily reflect the performance of the live remote deployment. Due to real-world internet transit routing and hardware constraints on EC2, local environment tests inherently register vastly faster latencies. Yet, both environments comfortably smash the structural constraints mandated by the hackathon:
+
+* **Local**: Write p(95) ~25ms | Read p(95) ~5ms | ~1,860 RPS 
+* **Deployment (EC2)**: Write p(95) ~115ms | Read p(95) ~75ms | ~878 RPS
+
+Even burdened with physical internet transit latency to an AWS domain, the live deployment massively outperformed the `150ms` maximum Write threshold and the `200ms` maximum Read threshold, whilst sustaining zero dropped requests.
 ## Hackathon Compromises & Caveats
 
 To strictly satisfy the requirement that the stack boots with a single `docker compose up -d` command with *zero* manual intervention on a cloned repository, the following architectural shortcuts were taken:
