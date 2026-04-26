@@ -7,7 +7,9 @@ Backend implementation for the NevUp Hiring Hackathon 2026
 * **Architecture Decisions**: [DECISIONS.md](DECISIONS.md)
 * **API Specification**: [must_follow_docs/nevup_openapi.yaml](must_follow_docs/nevup_openapi.yaml)
 * **Load Test Script**: [loadtest/trade.js](loadtest/trade.js)
-* **Load Test Report**: [loadtest/report.html](loadtest/report.html)
+* **Load Test Report**:
+  * [View Rendered HTML (GitHub Pages)](https://indenigrate.github.io/trade-journal/loadtest/report.html)
+  * [View Source (GitHub Repo)](https://github.com/indenigrate/trade-journal/blob/main/loadtest/report.html)
 
 ## Deployment details
 
