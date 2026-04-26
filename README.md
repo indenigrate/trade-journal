@@ -34,3 +34,13 @@ Key technical specifications enforced:
 * Observability: Structured zerolog outputs with trace identifiers per request
 
 Load testing results confirm API write latency significantly under the required parameter constraints limit at peak concurrency. Reference the load test report for specific request metrics.
+
+## Testing Remote Deployment
+
+You can verify your remote deployment functionality and performance using the included verification script. It will test cross-tenant data boundaries (HTTP 403), general uptime (HTTP 200), and execute the comprehensive `k6` load test against your live URL.
+
+```bash
+./test_remote.sh
+```
+
+*(Note: The script defaults to `http://nevup.apnadomain.qzz.io`. To test a different URL, prefix the command: `BASE_URL=http://your-domain.com ./test_remote.sh`)*
