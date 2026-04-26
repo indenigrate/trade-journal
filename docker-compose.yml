@@ -1,0 +1,79 @@
+services:
+  postgres-ts:
+    image: timescale/timescaledb:latest-pg16
+    environment:
+      POSTGRES_USER: nevup
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-nevuppass}
+      POSTGRES_DB: nevup
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./seeds:/seeds:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nevup -d nevup"]
+      interval: 2s
+      timeout: 5s
+      retries: 15
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 5s
+      retries: 15
+
+  migrator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["/bin/migrator"]
+    environment:
+      DATABASE_URL: postgres://nevup:${POSTGRES_PASSWORD:-nevuppass}@postgres-ts:5432/nevup?sslmode=disable
+      MIGRATIONS_DIR: /app/migrations
+    depends_on:
+      postgres-ts:
+        condition: service_healthy
+    volumes:
+      - ./seeds:/seeds:ro
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["/bin/api"]
+    ports:
+      - "8080:8080"
+    environment:
+      DATABASE_URL: postgres://nevup:${POSTGRES_PASSWORD:-nevuppass}@postgres-ts:5432/nevup?sslmode=disable
+      REDIS_URL: redis:6379
+      JWT_SECRET: ${JWT_SECRET:-97791d4db2aa5f689c3cc39356ce35762f0a73aa70923039d8ef72a2840a1b02}
+      PORT: "8080"
+    depends_on:
+      migrator:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["/bin/worker"]
+    environment:
+      DATABASE_URL: postgres://nevup:${POSTGRES_PASSWORD:-nevuppass}@postgres-ts:5432/nevup?sslmode=disable
+      REDIS_URL: redis:6379
+    depends_on:
+      migrator:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+  redisdata:
